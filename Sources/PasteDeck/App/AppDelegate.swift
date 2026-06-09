@@ -61,15 +61,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let frame = savedFrame()
         clipWindow = NSWindow(
             contentRect: frame,
-            styleMask: [.borderless, .nonactivatingPanel],
+            styleMask: [.titled, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
-        clipWindow.isOpaque = false
-        clipWindow.backgroundColor = .clear
+        clipWindow.title = "PasteDeck"
         clipWindow.level = .floating
         clipWindow.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
-        clipWindow.isMovableByWindowBackground = true
         clipWindow.delegate = self
 
         let historyView = HistoryView(clipStore: clipStore)
