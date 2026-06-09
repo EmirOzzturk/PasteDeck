@@ -5,13 +5,19 @@ PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="PasteDeck"
 BUILD_DIR="$PROJECT_DIR/.build"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
-BINARY="$BUILD_DIR/debug/$APP_NAME"
 
-echo "🔨 Building PasteDeck..."
-cd "$PROJECT_DIR"
-swift build
+CONFIG="${1:-release}"
+if [ "$CONFIG" = "release" ]; then
+    BINARY="$BUILD_DIR/release/$APP_NAME"
+    echo "🔨 Building PasteDeck (release)..."
+    swift build -c release
+else
+    BINARY="$BUILD_DIR/debug/$APP_NAME"
+    echo "🔨 Building PasteDeck (debug)..."
+    swift build
+fi
 
-echo "📦 Creating app bundle..."
+echo "📦 Creating app bundle ($CONFIG)..."
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
