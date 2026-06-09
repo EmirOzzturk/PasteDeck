@@ -141,13 +141,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         stopOutsideClickMonitoring()
 
         // Auto-paste
-        if shouldPasteAfterClose, previousAppPID != 0 {
+        if shouldPasteAfterClose {
             shouldPasteAfterClose = false
-            if let app = NSRunningApplication(processIdentifier: previousAppPID) {
-                app.activate()
+
+            // Önceki uygulamayı aktif et (güvence için)
+            if previousAppPID != 0 {
+                NSRunningApplication(processIdentifier: previousAppPID)?.activate()
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.sendPaste(to: self.previousAppPID)
+
+            // Pencere kapandı, focus önceki uygulamaya döndü.
+            // HID seviyesinde global Cmd+V gönder.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.sendGlobalPaste()
             }
         }
     }
@@ -197,22 +202,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     // MARK: - Auto Paste
 
-    private func sendPaste(to pid: pid_t) {
-        let vKey: CGKeyCode = 9
+    /// HID seviyesinde global Cmd+V gönderir.
+    private func sendGlobalPaste() {
+        let source = CGEventSource(stateID: .hidSystemState)
+        let vKey: CGKeyCode = 9 // kVK_ANSI_V
 
-        func postKey(_ down: Bool) {
-            guard let event = CGEvent(
-                keyboardEventSource: nil,
-                virtualKey: vKey,
-                keyDown: down
-            ) else { return }
-            event.flags = .maskCommand
-            event.postToPid(pid)
-        }
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true)
+        keyDown?.flags = .maskCommand
+        keyDown?.post(tap: .cghidEventTap)
 
-        postKey(true)
-        usleep(10_000)
-        postKey(false)
+        Thread.sleep(forTimeInterval: 0.02)
+
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: false)
+        keyUp?.flags = .maskCommand
+        keyUp?.post(tap: .cghidEventTap)
     }
 
     // MARK: - Shortcut
