@@ -91,7 +91,14 @@ struct HistoryView: View {
                     ? Color.accentColor.opacity(0.15)
                     : Color.clear)
                 .contextMenu {
-                    Button("Copy") { selectClip(item) }
+                    if item.type == .html {
+                        Button("Copy") { selectClip(item) }
+                        Button("Copy Plain Text") {
+                            clipStore.copyPlainText(clipID: item.id)
+                        }
+                    } else {
+                        Button("Copy") { selectClip(item) }
+                    }
                     Button(item.isPinned ? "Unpin" : "Pin") {
                         clipStore.togglePin(id: item.id)
                     }

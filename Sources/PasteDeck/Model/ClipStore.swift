@@ -202,6 +202,24 @@ final class ClipStore: ObservableObject {
         // Sıralama değişmesin — touch yapılmaz
     }
 
+    // MARK: - Copy Plain Text (HTML için)
+
+    func copyPlainText(clipID: UUID) {
+        guard let entry = entries.first(where: { $0.id == clipID }),
+              entry.type == .html else { return }
+
+        Self.suppressObserver = true
+        defer {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                Self.suppressObserver = false
+            }
+        }
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(entry.displayText, forType: .string)
+    }
+
     // MARK: - Fetch
 
     func fetchAll(limit: Int = 50) -> [ClipItemDTO] {
