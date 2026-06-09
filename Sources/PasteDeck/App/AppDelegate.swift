@@ -204,18 +204,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// HID seviyesinde global Cmd+V gönderir.
     private func sendGlobalPaste() {
-        let source = CGEventSource(stateID: .hidSystemState)
+        // Session-level event tap — HID'e göre daha az permission gerektirir
+        let source = CGEventSource(stateID: .combinedSessionState)
         let vKey: CGKeyCode = 9 // kVK_ANSI_V
 
         let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true)
         keyDown?.flags = .maskCommand
-        keyDown?.post(tap: .cghidEventTap)
+        keyDown?.post(tap: .cgSessionEventTap)
 
-        Thread.sleep(forTimeInterval: 0.02)
+        Thread.sleep(forTimeInterval: 0.03)
 
         let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: false)
         keyUp?.flags = .maskCommand
-        keyUp?.post(tap: .cghidEventTap)
+        keyUp?.post(tap: .cgSessionEventTap)
     }
 
     // MARK: - Shortcut
