@@ -29,5 +29,8 @@ struct SearchBar: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(Color(NSColor.controlBackgroundColor))
+        .onAppear {
+            isFocused = true
+        }
     }
 }

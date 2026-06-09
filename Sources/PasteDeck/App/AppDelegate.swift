@@ -79,7 +79,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self?.closeWindow()
         }
 
-        clipWindow.contentView = NSHostingView(rootView: view)
+        clipWindow.contentView = FirstResponderHostingView(rootView: view)
+        clipWindow.initialFirstResponder = clipWindow.contentView
     }
 
     private func savedFrame() -> NSRect {
