@@ -7,6 +7,7 @@ final class ShortcutManager {
     private var hotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
     var onHotKey: (() -> Void)?
+    private(set) var isRegistered = false
 
     private static let hotKeyID = UInt32(1)
     private static let eventSpec = EventTypeSpec(
@@ -17,9 +18,6 @@ final class ShortcutManager {
     // MARK: - Register
 
     func register() {
-        // Accessibility izni kontrol et
-        guard checkAccessibility() else { return }
-
         var hotKeyID = EventHotKeyID()
         hotKeyID.signature = 0x50444B54 // "PDKT"
         hotKeyID.id = Self.hotKeyID
@@ -33,7 +31,13 @@ final class ShortcutManager {
             &hotKeyRef
         )
 
-        guard status == noErr else { return }
+        // İzin yoksa RegisterEventHotKey başarısız olur.
+        guard status == noErr else {
+            isRegistered = false
+            return
+        }
+
+        isRegistered = true
 
         // Event handler
         var spec = Self.eventSpec
@@ -77,6 +81,29 @@ final class ShortcutManager {
     }
 
     // MARK: - Accessibility Permission
+
+    /// Kullanıcıyı doğrudan Accessibility ayarlarına yönlendir
+    func requestPermission() {
+        let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        if let url = URL(string: urlString) {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// Kullanıcıya izin vermesi gerektiğini söyleyen alert göster
+    func showPermissionAlert() {
+        let alert = NSAlert()
+        alert.messageText = "Accessibility Permission Required"
+        alert.informativeText = "PasteDeck needs accessibility access to use the Cmd+Shift+V shortcut.\n\nOpen System Settings > Privacy & Security > Accessibility, then enable PasteDeck and restart the app."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Open Settings")
+        alert.addButton(withTitle: "Later")
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            requestPermission()
+        }
+    }
 
     private func checkAccessibility() -> Bool {
         let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true] as CFDictionary

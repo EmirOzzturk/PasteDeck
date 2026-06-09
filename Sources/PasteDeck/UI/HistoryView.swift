@@ -6,6 +6,7 @@ struct HistoryView: View {
     @State private var searchText = ""
     @State private var items: [ClipItemDTO] = []
     @State private var previousCount = 0
+    @State private var selectedIndex: Int? = 0
 
     var filteredItems: [ClipItemDTO] {
         if searchText.isEmpty { return items }
@@ -27,11 +28,28 @@ struct HistoryView: View {
             footer
         }
         .frame(width: 320, height: 480)
-        .onAppear { refreshItems() }
+        .focusable()
+        .focusEffectDisabled()
+        .onMoveCommand { direction in
+            handleMoveCommand(direction)
+        }
+        .onKeyPress(.return) {
+            confirmSelection()
+            return .handled
+        }
+        .onKeyPress(.escape) {
+            NSApp.keyWindow?.close()
+            return .handled
+        }
+        .onAppear {
+            refreshItems()
+        }
         .onReceive(clipStore.objectWillChange) { _ in
             refreshItems()
         }
     }
+
+    // MARK: - Empty State
 
     private var emptyState: some View {
         VStack(spacing: 8) {
@@ -50,17 +68,25 @@ struct HistoryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - List View
+
     private var listView: some View {
         ScrollViewReader { proxy in
-            List(filteredItems) { item in
+            List(Array(filteredItems.enumerated()), id: \.element.id) { index, item in
                 ClipRowView(
                     item: item,
-                    onTap: { selectClip(item) },
+                    onTap: {
+                        selectedIndex = index
+                        selectClip(item)
+                    },
                     onPin: { clipStore.togglePin(id: item.id) }
                 )
                 .id(item.id)
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
+                .background(selectedIndex == index
+                    ? Color.accentColor.opacity(0.15)
+                    : Color.clear)
                 .contextMenu {
                     Button("Copy") { selectClip(item) }
                     Button(item.isPinned ? "Unpin" : "Pin") {
@@ -74,17 +100,31 @@ struct HistoryView: View {
             }
             .listStyle(.plain)
             .onChange(of: items.count) { _, newCount in
-                if newCount > previousCount, let firstID = filteredItems.first?.id {
-                    proxy.scrollTo(firstID, anchor: .top)
+                if newCount > previousCount {
+                    selectedIndex = 0
+                    if let firstID = filteredItems.first?.id {
+                        proxy.scrollTo(firstID, anchor: .top)
+                    }
                 }
                 previousCount = newCount
+            }
+            .onChange(of: selectedIndex) { _, newIndex in
+                if let newIndex, newIndex < filteredItems.count {
+                    let id = filteredItems[newIndex].id
+                    proxy.scrollTo(id, anchor: .center)
+                }
             }
         }
     }
 
+    // MARK: - Footer
+
     private var footer: some View {
         HStack {
             Text("\(items.count) clips")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+            Text("↑↓ select  ↵ copy  esc close")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
             Spacer()
@@ -96,6 +136,37 @@ struct HistoryView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
     }
+
+    // MARK: - Keyboard Handling
+
+    private func handleMoveCommand(_ direction: MoveCommandDirection) {
+        let count = filteredItems.count
+        guard count > 0 else { return }
+
+        switch direction {
+        case .up:
+            if let current = selectedIndex {
+                selectedIndex = max(0, current - 1)
+            } else {
+                selectedIndex = 0
+            }
+        case .down:
+            if let current = selectedIndex {
+                selectedIndex = min(count - 1, current + 1)
+            } else {
+                selectedIndex = 0
+            }
+        default:
+            break
+        }
+    }
+
+    private func confirmSelection() {
+        guard let index = selectedIndex, index < filteredItems.count else { return }
+        selectClip(filteredItems[index])
+    }
+
+    // MARK: - Actions
 
     private func selectClip(_ item: ClipItemDTO) {
         let pasteboard = NSPasteboard.general
@@ -112,5 +183,8 @@ struct HistoryView: View {
 
     private func refreshItems() {
         items = clipStore.fetchAll()
+        if selectedIndex ?? 0 >= filteredItems.count {
+            selectedIndex = max(0, filteredItems.count - 1)
+        }
     }
 }

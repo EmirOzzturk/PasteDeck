@@ -49,7 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupPopover() {
         popover = NSPopover()
         popover.contentSize = NSSize(width: 320, height: 480)
-        popover.behavior = .transient
+        popover.behavior = .applicationDefined
         popover.contentViewController = NSHostingController(
             rootView: HistoryView(clipStore: clipStore)
         )
@@ -66,7 +66,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 of: button,
                 preferredEdge: .minY
             )
-            popover.contentViewController?.view.window?.makeKey()
+            // Klavye eventleri için window'u key yap ve focus ver
+            if let window = popover.contentViewController?.view.window {
+                window.makeKey()
+                window.makeFirstResponder(popover.contentViewController?.view)
+            }
         }
     }
 
@@ -79,9 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if self.popover.isShown {
                 self.popover.performClose(nil)
             } else {
-                // Önce uygulamayı öne getir
                 NSApp.activate(ignoringOtherApps: true)
-
                 self.popover.show(
                     relativeTo: button.bounds,
                     of: button,
@@ -92,5 +94,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         shortcutManager.register()
+
+        // Kayıt başarısızsa kullanıcıya bildir
+        if !shortcutManager.isRegistered {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.shortcutManager.showPermissionAlert()
+            }
+        }
     }
 }
