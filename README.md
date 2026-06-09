@@ -1,15 +1,15 @@
 # PasteDeck
 
-> macOS için hafif, hızlı clipboard yöneticisi. Kopyaladıklarınızı tutar, listeler, tekrar yapıştırmanızı sağlar.
+> Lightweight, fast clipboard manager for macOS. Captures everything you copy, lists it, and lets you paste it back.
 
 ![Platform](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-6.2-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## Kurulum
+## Install
 
 ```bash
-git clone https://github.com/kullanici/PasteDeck.git
+git clone https://github.com/EmirOzzturk/PasteDeck.git
 cd PasteDeck
 
 # Debug build
@@ -18,41 +18,41 @@ bash build_app.sh
 # Release build
 bash build_app.sh release
 
-# Çalıştır
+# Launch
 open .build/PasteDeck.app
 ```
 
-İlk açılışta `Cmd+Shift+V` kısayolu için **Accessibility izni** ister — izin verin.
+On first launch, macOS will ask for **Accessibility permission** for the `Cmd+Shift+V` shortcut — grant it.
 
-## Kullanım
+## Usage
 
-| Eylem | Nasıl |
-|-------|-------|
-| Panoyu aç | Menü bar ikonu `📋` veya `Cmd+Shift+V` |
-| Clip seç ve yapıştır | ↑↓ ile gez, `Enter` — otomatik yapıştırır |
-| Arama | Arama kutusuna yaz, anlık filtreler |
-| Sabitle (pin) | Sağ tık → Pin / Hover'da 📌 simgesi |
-| Sil | Sağ tık → Delete |
-| Tümünü temizle | Alt kısımda "Clear All" (pin'li olanlar kalır) |
-| Kapat | `Esc` veya pencere dışına tıkla |
+| Action | How |
+|--------|-----|
+| Open panel | Menu bar icon `📋` or `Cmd+Shift+V` |
+| Select & paste | Arrow keys ↑↓ to navigate, `Enter` — auto-pastes |
+| Search | Type in the search box, filters instantly |
+| Pin | Right-click → Pin / Hover → 📌 icon |
+| Delete | Right-click → Delete |
+| Clear all | Footer "Clear All" (pinned items survive) |
+| Close | `Esc` or click outside |
 
-**Özel:** HTML kopyaladığınızda sağ tık → **Copy Plain Text** ile sadece düz yazıyı alabilirsiniz.
+**Tip:** For HTML clips, right-click → **Copy Plain Text** to get just the text without formatting.
 
-## Özellikler
+## Features
 
-- 🚀 **Anlık** — 0.15 sn poll ile neredeyse gerçek zamanlı
-- 🖼️ **Görsel desteği** — Kopyalanan görselleri thumbnail ile listeler
-- 📌 **Pin** — Sık kullandıklarınız silinmez
-- 🔍 **Anlık arama** — Geçmiş içinde filtreleme
-- 🪟 **Konum hatırlama** — Pencereyi sürükleyin, yerini hatırlar
-- ⌨️ **Tam klavye** — Aç, gez, seç, kapat — hepsi klavyeden
-- 🧹 **Otomatik temizlik** — 50 üstü LRU, bozuk referansları otomatik siler
+- 🚀 **Real-time** — 0.15s poll, near-instant capture
+- 🖼️ **Image support** — Captures PNG/TIFF, displays thumbnails
+- 📌 **Pin** — Frequently used clips are never pruned
+- 🔍 **Live search** — Filter history as you type
+- 🪟 **Position memory** — Drag the window, it remembers
+- ⌨️ **Full keyboard** — Open, navigate, select, close — no mouse needed
+- 🧹 **Self-cleaning** — 50-item LRU limit, auto-removes orphaned files
 
-## Gereksinimler
+## Requirements
 
-- macOS 14 Sonoma veya üstü
+- macOS 14 Sonoma or later
 - Swift 6.2
 
-## Lisans
+## License
 
-MIT — özgürce kullanın, fork'layın, dağıtın.
+MIT — free to use, fork, and distribute.
