@@ -10,6 +10,8 @@ struct HistoryView: View {
 
     /// Clip seçilip pasteboard'a yazıldıktan sonra AppDelegate'e haber verir
     var onClipSelected: (() -> Void)?
+    /// Escape ile kapatma
+    var onDismiss: (() -> Void)?
 
     var filteredItems: [ClipItemDTO] {
         if searchText.isEmpty { return items }
@@ -41,7 +43,7 @@ struct HistoryView: View {
             return .handled
         }
         .onKeyPress(.escape) {
-            NSApp.keyWindow?.close()
+            onDismiss?()
             return .handled
         }
         .onAppear {
@@ -180,8 +182,8 @@ struct HistoryView: View {
 
     private func selectClip(_ item: ClipItemDTO) {
         clipStore.writeToPasteboard(clipID: item.id)
-        onClipSelected?()  // AppDelegate'e haber ver → popoverDidClose'da yapıştır
-        NSApp.keyWindow?.close()
+        onClipSelected?()
+        onDismiss?()
     }
 
     private func clearAll() {

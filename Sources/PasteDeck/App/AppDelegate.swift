@@ -1,17 +1,23 @@
 import AppKit
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
-    private var popover: NSPopover!
+    private var clipWindow: NSWindow!
     private var clipStore: ClipStore!
     private var monitor: ClipboardMonitor!
     private let shortcutManager = ShortcutManager()
 
-    /// Popover açılmadan önceki aktif uygulamanın PID'si
+    /// Açılmadan önceki aktif uygulamanın PID'si
     private var previousAppPID: pid_t = 0
-    /// Popover kapandıktan sonra yapıştırma yapılacak mı?
+    /// Kapandıktan sonra yapıştırma yapılacak mı?
     private var shouldPasteAfterClose = false
+    /// Dış tıklamaları yakalamak için event monitor
+    private var outsideClickMonitor: Any?
+
+    // MARK: - UserDefaults Keys
+
+    private let positionKey = "PasteDeck.windowFrame"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         clipStore = ClipStore()
@@ -23,8 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         // Menü bar öğesi
         setupMenuBar()
 
-        // Popover
-        setupPopover()
+        // Pencere
+        setupWindow()
 
         // Global kısayol (Cmd+Shift+V)
         setupShortcut()
@@ -44,72 +50,147 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                 systemSymbolName: "list.clipboard",
                 accessibilityDescription: "PasteDeck"
             )
-            button.action = #selector(togglePopover)
+            button.action = #selector(toggleWindow)
             button.target = self
         }
     }
 
-    // MARK: - Popover
+    // MARK: - Window
 
-    private func setupPopover() {
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 320, height: 480)
-        popover.behavior = .transient
-        popover.delegate = self
+    private func setupWindow() {
+        let frame = savedFrame()
+        clipWindow = NSWindow(
+            contentRect: frame,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        clipWindow.isOpaque = false
+        clipWindow.backgroundColor = .clear
+        clipWindow.level = .floating
+        clipWindow.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
+        clipWindow.isMovableByWindowBackground = true
+        clipWindow.delegate = self
 
-        var historyView = HistoryView(clipStore: clipStore)
-        historyView.onClipSelected = { [weak self] in
+        let historyView = HistoryView(clipStore: clipStore)
+        var view = historyView
+        view.onClipSelected = { [weak self] in
             self?.shouldPasteAfterClose = true
         }
-        popover.contentViewController = NSHostingController(
-            rootView: historyView
+        view.onDismiss = { [weak self] in
+            self?.closeWindow()
+        }
+
+        clipWindow.contentView = NSHostingView(rootView: view)
+    }
+
+    private func savedFrame() -> NSRect {
+        if let data = UserDefaults.standard.string(forKey: positionKey) {
+            let frame = NSRectFromString(data)
+            if !frame.isEmpty, frame.width >= 200, frame.height >= 200 {
+                if let screen = NSScreen.main, screen.visibleFrame.intersects(frame) {
+                    return frame
+                }
+            }
+        }
+        return defaultFrame()
+    }
+
+    private func defaultFrame() -> NSRect {
+        guard let screen = NSScreen.main else {
+            return NSRect(x: 200, y: 200, width: 320, height: 480)
+        }
+        let visible = screen.visibleFrame
+        let w: CGFloat = 320, h: CGFloat = 480
+        let x = visible.midX - w / 2
+        let y = visible.midY - h / 2
+        return NSRect(x: x, y: y, width: w, height: h)
+    }
+
+    private func saveFrame() {
+        UserDefaults.standard.set(
+            NSStringFromRect(clipWindow.frame),
+            forKey: positionKey
         )
     }
 
-    @objc private func togglePopover() {
-        guard let button = statusItem.button else { return }
-
-        if popover.isShown {
-            popover.performClose(nil)
+    @objc private func toggleWindow() {
+        if clipWindow.isVisible {
+            closeWindow()
         } else {
-            showPopover(button: button)
+            showWindow()
         }
     }
 
-    private func showPopover(button: NSStatusBarButton) {
-        // Açılmadan önceki aktif uygulamayı kaydet
+    private func showWindow() {
         previousAppPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
 
-        popover.show(
-            relativeTo: button.bounds,
-            of: button,
-            preferredEdge: .minY
-        )
-        if let window = popover.contentViewController?.view.window {
-            window.makeKey()
-            window.makeFirstResponder(popover.contentViewController?.view)
+        clipWindow.makeKeyAndOrderFront(nil)
+        clipWindow.makeFirstResponder(clipWindow.contentView)
+        NSApp.activate(ignoringOtherApps: true)
+
+        startOutsideClickMonitoring()
+    }
+
+    private func closeWindow() {
+        saveFrame()
+        clipWindow.orderOut(nil)
+        stopOutsideClickMonitoring()
+
+        // Auto-paste
+        if shouldPasteAfterClose, previousAppPID != 0 {
+            shouldPasteAfterClose = false
+            if let app = NSRunningApplication(processIdentifier: previousAppPID) {
+                app.activate()
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.sendPaste(to: self.previousAppPID)
+            }
         }
     }
 
-    // MARK: - NSPopoverDelegate
+    // MARK: - Outside Click
 
-    func popoverDidClose(_ notification: Notification) {
-        guard shouldPasteAfterClose, previousAppPID != 0 else { return }
-        shouldPasteAfterClose = false
-
-        // Önceki uygulamayı tekrar aktif et
-        if let app = NSRunningApplication(processIdentifier: previousAppPID) {
-            app.activate()
-        }
-
-        // Cmd+V gönder
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.sendPaste(to: self.previousAppPID)
+    private func startOutsideClickMonitoring() {
+        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
+            guard let self, self.clipWindow.isVisible else { return }
+            _ = event.locationInWindow
+            // Global monitörde locationInWindow nil, ekran koordinatı kullan
+            let screenPoint = NSEvent.mouseLocation
+            if !self.clipWindow.frame.contains(screenPoint) {
+                DispatchQueue.main.async {
+                    self.closeWindow()
+                }
+            }
         }
     }
+
+    private func stopOutsideClickMonitoring() {
+        if let monitor = outsideClickMonitor {
+            NSEvent.removeMonitor(monitor)
+            outsideClickMonitor = nil
+        }
+    }
+
+    // MARK: - NSWindowDelegate
+
+    func windowDidResignKey(_ notification: Notification) {
+        // Başka pencereye tıklanınca kapat
+        if clipWindow.isVisible {
+            closeWindow()
+        }
+    }
+
+    func windowDidMove(_ notification: Notification) {
+        saveFrame()
+    }
+
+    // MARK: - Auto Paste
 
     private func sendPaste(to pid: pid_t) {
-        let vKey: CGKeyCode = 9 // kVK_ANSI_V
+        let vKey: CGKeyCode = 9
 
         func postKey(_ down: Bool) {
             guard let event = CGEvent(
@@ -130,20 +211,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     private func setupShortcut() {
         shortcutManager.onHotKey = { [weak self] in
-            guard let self, let button = self.statusItem?.button else { return }
+            guard let self else { return }
 
-            if self.popover.isShown {
-                self.popover.performClose(nil)
+            if self.clipWindow.isVisible {
+                self.closeWindow()
             } else {
                 NSApp.activate(ignoringOtherApps: true)
-                self.showPopover(button: button)
-                self.popover.contentViewController?.view.window?.makeKey()
+                self.showWindow()
             }
         }
 
         shortcutManager.register()
 
-        // Kayıt başarısızsa kullanıcıya bildir
         if !shortcutManager.isRegistered {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 self?.shortcutManager.showPermissionAlert()
