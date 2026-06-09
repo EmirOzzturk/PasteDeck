@@ -24,5 +24,7 @@
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSAccessibilityUsageDescription</key>
+    <string>PasteDeck needs accessibility access to use the Cmd+Shift+V global shortcut for opening the clipboard history.</string>
 </dict>
 </plist>

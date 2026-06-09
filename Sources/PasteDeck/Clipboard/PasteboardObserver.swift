@@ -11,7 +11,7 @@ final class PasteboardObserver {
     }
 
     func startMonitoring(onChange: @escaping (String, ClipType) -> Void) {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] _ in
             guard let self else { return }
             let current = self.pasteboard.changeCount
             guard current != self.lastChangeCount else { return }

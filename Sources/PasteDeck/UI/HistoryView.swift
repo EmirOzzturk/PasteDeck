@@ -5,6 +5,7 @@ struct HistoryView: View {
     @ObservedObject var clipStore: ClipStore
     @State private var searchText = ""
     @State private var items: [ClipItemDTO] = []
+    @State private var previousCount = 0
 
     var filteredItems: [ClipItemDTO] {
         if searchText.isEmpty { return items }
@@ -27,9 +28,9 @@ struct HistoryView: View {
         }
         .frame(width: 320, height: 480)
         .onAppear { refreshItems() }
-        .onReceive(
-            Timer.publish(every: 2, on: .main, in: .common).autoconnect()
-        ) { _ in refreshItems() }
+        .onReceive(clipStore.objectWillChange) { _ in
+            refreshItems()
+        }
     }
 
     private var emptyState: some View {
@@ -50,27 +51,35 @@ struct HistoryView: View {
     }
 
     private var listView: some View {
-        List(filteredItems) { item in
-            ClipRowView(
-                item: item,
-                onTap: { selectClip(item) },
-                onPin: { clipStore.togglePin(id: item.id) }
-            )
-            .id(item.id)
-            .listRowInsets(EdgeInsets())
-            .listRowSeparator(.hidden)
-            .contextMenu {
-                Button("Copy") { selectClip(item) }
-                Button(item.isPinned ? "Unpin" : "Pin") {
-                    clipStore.togglePin(id: item.id)
-                }
-                Divider()
-                Button("Delete", role: .destructive) {
-                    clipStore.delete(id: item.id)
+        ScrollViewReader { proxy in
+            List(filteredItems) { item in
+                ClipRowView(
+                    item: item,
+                    onTap: { selectClip(item) },
+                    onPin: { clipStore.togglePin(id: item.id) }
+                )
+                .id(item.id)
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .contextMenu {
+                    Button("Copy") { selectClip(item) }
+                    Button(item.isPinned ? "Unpin" : "Pin") {
+                        clipStore.togglePin(id: item.id)
+                    }
+                    Divider()
+                    Button("Delete", role: .destructive) {
+                        clipStore.delete(id: item.id)
+                    }
                 }
             }
+            .listStyle(.plain)
+            .onChange(of: items.count) { _, newCount in
+                if newCount > previousCount, let firstID = filteredItems.first?.id {
+                    proxy.scrollTo(firstID, anchor: .top)
+                }
+                previousCount = newCount
+            }
         }
-        .listStyle(.plain)
     }
 
     private var footer: some View {

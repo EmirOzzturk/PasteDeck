@@ -42,6 +42,7 @@ final class ClipStore: ObservableObject {
         if let index = entries.firstIndex(where: { $0.content == trimmed }) {
             entries[index].createdAt = Date()
             saveToDisk()
+            objectWillChange.send()
             return
         }
 
@@ -49,6 +50,7 @@ final class ClipStore: ObservableObject {
         let entry = ClipEntry(content: trimmed, type: type)
         entries.insert(entry, at: 0)
         saveToDisk()
+        objectWillChange.send()
 
         // Limit aşımı
         pruneOldest()

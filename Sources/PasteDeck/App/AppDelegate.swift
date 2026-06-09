@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover!
     private var clipStore: ClipStore!
     private var monitor: ClipboardMonitor!
+    private let shortcutManager = ShortcutManager()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         clipStore = ClipStore()
@@ -19,6 +20,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Popover
         setupPopover()
+
+        // Global kısayol (Cmd+Shift+V)
+        setupShortcut()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        shortcutManager.unregister()
     }
 
     // MARK: - Menu Bar
@@ -60,5 +68,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    // MARK: - Shortcut
+
+    private func setupShortcut() {
+        shortcutManager.onHotKey = { [weak self] in
+            guard let self, let button = self.statusItem?.button else { return }
+
+            if self.popover.isShown {
+                self.popover.performClose(nil)
+            } else {
+                // Önce uygulamayı öne getir
+                NSApp.activate(ignoringOtherApps: true)
+
+                self.popover.show(
+                    relativeTo: button.bounds,
+                    of: button,
+                    preferredEdge: .minY
+                )
+                self.popover.contentViewController?.view.window?.makeKey()
+            }
+        }
+
+        shortcutManager.register()
     }
 }

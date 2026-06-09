@@ -3,13 +3,16 @@
 *.xcworkspace/xcuserdata
 build/
 DerivedData/
+*.xcodeproj
 
 # SwiftPM
 .build/
 *.swiftpm/
+Packages/
 
 # macOS
 .DS_Store
-
-# App bundle
 *.app
+
+# PasteDeck runtime
+clips.json
