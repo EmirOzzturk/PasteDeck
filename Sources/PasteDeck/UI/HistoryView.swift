@@ -171,6 +171,11 @@ struct HistoryView: View {
     private func selectClip(_ item: ClipItemDTO) {
         clipStore.writeToPasteboard(clipID: item.id)
         NSApp.keyWindow?.close()
+
+        // Otomatik yapıştır: popover kapandıktan sonra Cmd+V simüle et
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            simulatePaste()
+        }
     }
 
     private func clearAll() {
@@ -183,5 +188,22 @@ struct HistoryView: View {
         if selectedIndex ?? 0 >= filteredItems.count {
             selectedIndex = max(0, filteredItems.count - 1)
         }
+    }
+
+    // MARK: - Auto Paste
+
+    private func simulatePaste() {
+        let source = CGEventSource(stateID: .hidSystemState)
+        let vKey: CGKeyCode = 9 // kVK_ANSI_V
+
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true)
+        keyDown?.flags = .maskCommand
+        keyDown?.post(tap: .cghidEventTap)
+
+        usleep(10_000) // 10ms
+
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: false)
+        keyUp?.flags = .maskCommand
+        keyUp?.post(tap: .cghidEventTap)
     }
 }

@@ -49,7 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupPopover() {
         popover = NSPopover()
         popover.contentSize = NSSize(width: 320, height: 480)
-        popover.behavior = .applicationDefined
+        popover.behavior = .transient  // Click outside → otomatik kapanır
         popover.contentViewController = NSHostingController(
             rootView: HistoryView(clipStore: clipStore)
         )

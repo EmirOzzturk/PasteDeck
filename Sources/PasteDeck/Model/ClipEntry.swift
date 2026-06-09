@@ -6,7 +6,6 @@ enum ClipType: String, Codable, CaseIterable {
     case image
     case filePath
     case html
-    case rtf
 }
 
 struct ClipEntry: Codable, Identifiable {
@@ -28,7 +27,7 @@ struct ClipEntry: Codable, Identifiable {
             return Self.htmlToPlainText(content)
         case .image:
             return "[Image]"
-        case .text, .filePath, .rtf:
+        case .text, .filePath:
             return content
         }
     }

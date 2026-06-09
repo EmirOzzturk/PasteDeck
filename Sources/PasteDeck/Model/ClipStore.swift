@@ -171,9 +171,6 @@ final class ClipStore: ObservableObject {
                 pasteboard.setData(htmlData, forType: .html)
             }
 
-        case .rtf:
-            pasteboard.setString(entry.content, forType: .string)
-
         case .image:
             let fileURL = Self.imagesDirectory.appendingPathComponent(entry.content)
             if let imageData = try? Data(contentsOf: fileURL) {
@@ -191,7 +188,7 @@ final class ClipStore: ObservableObject {
             }
         }
 
-        touch(id: clipID)
+        // Sıralama değişmesin — touch yapılmaz
     }
 
     // MARK: - Fetch

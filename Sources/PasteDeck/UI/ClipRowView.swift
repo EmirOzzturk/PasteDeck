@@ -75,7 +75,6 @@ struct ClipRowView: View {
         case .image:    return "photo"
         case .filePath: return "doc"
         case .html:     return "chevron.left.slash.chevron.right"
-        case .rtf:      return "doc.richtext"
         }
     }
 

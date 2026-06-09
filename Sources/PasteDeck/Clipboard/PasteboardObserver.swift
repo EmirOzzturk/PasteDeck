@@ -53,14 +53,7 @@ final class PasteboardObserver {
                 return
             }
 
-            // 5. RTF
-            if let rtfData = self.pasteboard.data(forType: .rtf),
-               let rtfString = String(data: rtfData, encoding: .ascii) {
-                onChange(rtfString, nil, .rtf)
-                return
-            }
-
-            // 6. Text — son çare
+            // 5. Text — son çare
             if let text = self.pasteboard.string(forType: .string) {
                 onChange(text, nil, .text)
                 return
