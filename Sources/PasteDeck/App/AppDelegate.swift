@@ -61,7 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let frame = savedFrame()
         clipWindow = NSWindow(
             contentRect: frame,
-            styleMask: [.titled, .nonactivatingPanel],
+            styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
@@ -124,8 +124,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         previousAppPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
 
         clipWindow.makeKeyAndOrderFront(nil)
-        clipWindow.makeFirstResponder(clipWindow.contentView)
         NSApp.activate(ignoringOtherApps: true)
+
+        // SwiftUI view hierarchy'nin hazır olması için kısa bekle, sonra focus ver
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.clipWindow.makeFirstResponder(self?.clipWindow.contentView)
+        }
 
         startOutsideClickMonitoring()
     }
@@ -173,6 +177,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     // MARK: - NSWindowDelegate
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        closeWindow()
+        return false // Kendi closeWindow metodumuzu kullan
+    }
 
     func windowDidResignKey(_ notification: Notification) {
         // Başka pencereye tıklanınca kapat
