@@ -169,10 +169,7 @@ struct HistoryView: View {
     // MARK: - Actions
 
     private func selectClip(_ item: ClipItemDTO) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(item.content, forType: .string)
-        clipStore.touch(id: item.id)
+        clipStore.writeToPasteboard(clipID: item.id)
         NSApp.keyWindow?.close()
     }
 

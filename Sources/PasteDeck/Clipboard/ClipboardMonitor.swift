@@ -10,11 +10,14 @@ final class ClipboardMonitor {
     }
 
     func start() {
-        observer.startMonitoring { [weak self] text, type in
+        observer.startMonitoring { [weak self] text, imageData, type in
             guard let self else { return }
-            // MainActor üzerinde çalıştığından emin ol
             DispatchQueue.main.async {
-                self.store.add(text, type: type)
+                if type == .image, let imageData = imageData {
+                    self.store.addImage(imageData)
+                } else if let text = text {
+                    self.store.add(text, type: type)
+                }
             }
         }
     }
