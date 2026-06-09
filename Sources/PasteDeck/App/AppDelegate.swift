@@ -124,6 +124,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func showWindow() {
         previousAppPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
 
+        NSApp.unhide(nil)  // hide()'dan sonra geri getir
         clipWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
@@ -137,23 +138,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func closeWindow() {
         saveFrame()
-        clipWindow.orderOut(nil)
         stopOutsideClickMonitoring()
 
         // Auto-paste
         if shouldPasteAfterClose {
             shouldPasteAfterClose = false
 
-            // Önceki uygulamayı aktif et (güvence için)
-            if previousAppPID != 0 {
-                NSRunningApplication(processIdentifier: previousAppPID)?.activate()
-            }
+            // hide() — pencereyi kapatır VE PasteDeck'i deaktive eder.
+            // Focus otomatik olarak önceki uygulamaya döner.
+            NSApp.hide(nil)
 
-            // Pencere kapandı, focus önceki uygulamaya döndü.
-            // HID seviyesinde global Cmd+V gönder.
+            // Önceki uygulama aktif olduktan sonra Cmd+V gönder
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.sendGlobalPaste()
             }
+        } else {
+            clipWindow.orderOut(nil)
         }
     }
 
