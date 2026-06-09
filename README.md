@@ -6,7 +6,18 @@
 ![Swift](https://img.shields.io/badge/Swift-6.2-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## Install
+## Download
+
+Get the latest `.app` from [Releases](https://github.com/EmirOzzturk/PasteDeck/releases/latest).
+
+After downloading, remove the quarantine flag (macOS Gatekeeper):
+
+```bash
+xattr -cr ~/Downloads/PasteDeck.app
+open ~/Downloads/PasteDeck.app
+```
+
+## Build from source
 
 ```bash
 git clone https://github.com/EmirOzzturk/PasteDeck.git

@@ -34,6 +34,9 @@ cp "$PROJECT_DIR/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon
 # Create PkgInfo
 echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
+# Ad-hoc codesign (quarantine uyarısını azaltır)
+codesign --force --deep -s - "$APP_BUNDLE" 2>/dev/null || true
+
 echo "✅ App bundle created at: $APP_BUNDLE"
 echo ""
 echo "To run: open $APP_BUNDLE"
