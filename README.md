@@ -10,16 +10,10 @@
 
 ```bash
 brew tap EmirOzzturk/pastedeck
-brew install pastedeck
+brew install --cask pastedeck
 ```
 
 On first launch, grant **Accessibility** permission when prompted (needed for `Cmd+Shift+V`).
-
-Or download the `.app` from [Releases](https://github.com/EmirOzzturk/PasteDeck/releases) — remove quarantine first:
-
-```bash
-xattr -cr ~/Downloads/PasteDeck.app && open ~/Downloads/PasteDeck.app
-```
 
 ## Build from source
 
