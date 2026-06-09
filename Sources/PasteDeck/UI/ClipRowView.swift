@@ -15,16 +15,11 @@ struct ClipRowView: View {
             typeIcon
                 .frame(width: 28)
 
-            VStack(alignment: .leading, spacing: 2) {
-                // Display text (HTML stripped, image placeholder)
+            VStack(alignment: .leading, spacing: 0) {
                 Text(displayText)
                     .lineLimit(2)
                     .font(.system(size: 12))
                     .foregroundColor(.primary)
-
-                Text(item.createdAt, style: .relative)
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary)
             }
 
             Spacer(minLength: 4)
