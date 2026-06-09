@@ -8,6 +8,9 @@ struct HistoryView: View {
     @State private var previousCount = 0
     @State private var selectedIndex: Int? = 0
 
+    /// Clip seçilip pasteboard'a yazıldıktan sonra AppDelegate'e haber verir
+    var onClipSelected: (() -> Void)?
+
     var filteredItems: [ClipItemDTO] {
         if searchText.isEmpty { return items }
         return clipStore.search(searchText)
@@ -170,12 +173,8 @@ struct HistoryView: View {
 
     private func selectClip(_ item: ClipItemDTO) {
         clipStore.writeToPasteboard(clipID: item.id)
+        onClipSelected?()  // AppDelegate'e haber ver → popoverDidClose'da yapıştır
         NSApp.keyWindow?.close()
-
-        // Otomatik yapıştır: popover kapandıktan sonra Cmd+V simüle et
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            simulatePaste()
-        }
     }
 
     private func clearAll() {
@@ -188,13 +187,5 @@ struct HistoryView: View {
         if selectedIndex ?? 0 >= filteredItems.count {
             selectedIndex = max(0, filteredItems.count - 1)
         }
-    }
-
-    // MARK: - Auto Paste
-
-    private func simulatePaste() {
-        // AppleScript ile Cmd+V — Accessibility izni gerektirmez, System Events kullanır
-        let script = "tell application \"System Events\" to keystroke \"v\" using command down"
-        NSAppleScript(source: script)?.executeAndReturnError(nil)
     }
 }
