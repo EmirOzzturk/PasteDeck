@@ -16,3 +16,7 @@ Packages/
 
 # PasteDeck runtime
 clips.json
+
+# Generated icon
+Resources/AppIcon.icns
+Resources/AppIcon.iconset/
