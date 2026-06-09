@@ -4,46 +4,33 @@ import AppKit
 struct HistoryView: View {
     @ObservedObject var clipStore: ClipStore
     @State private var searchText = ""
-    @State private var items: [ClipItem] = []
-    @State private var refreshID = UUID()
+    @State private var items: [ClipItemDTO] = []
 
-    var filteredItems: [ClipItem] {
-        if searchText.isEmpty {
-            return items
-        }
+    var filteredItems: [ClipItemDTO] {
+        if searchText.isEmpty { return items }
         return clipStore.search(searchText)
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Arama çubuğu
             SearchBar(text: $searchText)
-
             Divider()
 
-            // Liste
             if filteredItems.isEmpty {
                 emptyState
             } else {
                 listView
             }
 
-            // Alt bilgi
             Divider()
             footer
         }
         .frame(width: 320, height: 480)
-        .onAppear {
-            refreshItems()
-        }
+        .onAppear { refreshItems() }
         .onReceive(
             Timer.publish(every: 2, on: .main, in: .common).autoconnect()
-        ) { _ in
-            refreshItems()
-        }
+        ) { _ in refreshItems() }
     }
-
-    // MARK: - Empty State
 
     private var emptyState: some View {
         VStack(spacing: 8) {
@@ -62,49 +49,38 @@ struct HistoryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - List View
-
     private var listView: some View {
-        ScrollViewReader { proxy in
-            List(filteredItems) { item in
-                ClipRowView(
-                    item: item,
-                    onTap: { selectClip(item) },
-                    onPin: { clipStore.togglePin(item) }
-                )
-                .id(item.id)
-                .listRowInsets(EdgeInsets())
-                .listRowSeparator(.hidden)
-                .contextMenu {
-                    Button("Copy") { selectClip(item) }
-                    Button(item.isPinned ? "Unpin" : "Pin") {
-                        clipStore.togglePin(item)
-                    }
-                    Divider()
-                    Button("Delete", role: .destructive) {
-                        clipStore.delete(item)
-                    }
+        List(filteredItems) { item in
+            ClipRowView(
+                item: item,
+                onTap: { selectClip(item) },
+                onPin: { clipStore.togglePin(id: item.id) }
+            )
+            .id(item.id)
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
+            .contextMenu {
+                Button("Copy") { selectClip(item) }
+                Button(item.isPinned ? "Unpin" : "Pin") {
+                    clipStore.togglePin(id: item.id)
+                }
+                Divider()
+                Button("Delete", role: .destructive) {
+                    clipStore.delete(id: item.id)
                 }
             }
-            .listStyle(.plain)
         }
+        .listStyle(.plain)
     }
-
-    // MARK: - Footer
 
     private var footer: some View {
         HStack {
             Text("\(items.count) clips")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
-
             Spacer()
-
-            Button {
-                clearAll()
-            } label: {
-                Text("Clear All")
-                    .font(.system(size: 10))
+            Button { clearAll() } label: {
+                Text("Clear All").font(.system(size: 10))
             }
             .buttonStyle(.plain)
         }
@@ -112,22 +88,16 @@ struct HistoryView: View {
         .padding(.vertical, 4)
     }
 
-    // MARK: - Actions
-
-    private func selectClip(_ item: ClipItem) {
+    private func selectClip(_ item: ClipItemDTO) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(item.content, forType: .string)
-        clipStore.touch(item)
-
-        // Popover'ı kapat
+        clipStore.touch(id: item.id)
         NSApp.keyWindow?.close()
     }
 
     private func clearAll() {
-        for item in items where !item.isPinned {
-            clipStore.delete(item)
-        }
+        clipStore.clearAll()
         refreshItems()
     }
 

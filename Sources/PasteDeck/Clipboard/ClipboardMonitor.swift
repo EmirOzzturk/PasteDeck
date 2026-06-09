@@ -1,7 +1,5 @@
 import Foundation
 
-/// PasteboardObserver ile ClipStore arasında köprü.
-/// Clipboard değişikliklerini yakalar, ClipStore'a iletir.
 @MainActor
 final class ClipboardMonitor {
     private let observer = PasteboardObserver()
@@ -14,7 +12,10 @@ final class ClipboardMonitor {
     func start() {
         observer.startMonitoring { [weak self] text, type in
             guard let self else { return }
-            self.store.add(text, type: type)
+            // MainActor üzerinde çalıştığından emin ol
+            DispatchQueue.main.async {
+                self.store.add(text, type: type)
+            }
         }
     }
 

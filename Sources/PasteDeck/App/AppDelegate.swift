@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import SwiftData
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
@@ -9,16 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var monitor: ClipboardMonitor!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // SwiftData container
-        let container: ModelContainer
-        do {
-            container = try ModelContainer(for: ClipItem.self)
-        } catch {
-            fatalError("SwiftData container oluşturulamadı: \(error)")
-        }
-
-        let context = container.mainContext
-        clipStore = ClipStore(modelContext: context)
+        clipStore = ClipStore()
 
         // Clipboard izleyiciyi başlat
         monitor = ClipboardMonitor(store: clipStore)
@@ -68,7 +58,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 of: button,
                 preferredEdge: .minY
             )
-            // Popover açıldığında her zaman öne getir
             popover.contentViewController?.view.window?.makeKey()
         }
     }

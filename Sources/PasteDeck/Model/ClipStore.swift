@@ -1,105 +1,122 @@
 import Foundation
-import SwiftData
 
 @MainActor
 final class ClipStore: ObservableObject {
-    private let modelContext: ModelContext
     private let maxItems = 50
+    private let storeURL: URL
+    private var entries: [ClipEntry] = []
 
-    init(modelContext: ModelContext) {
-        self.modelContext = modelContext
+    init() {
+        let appSupport = FileManager.default
+            .homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/PasteDeck")
+        try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        self.storeURL = appSupport.appendingPathComponent("clips.json")
+        loadFromDisk()
+    }
+
+    // MARK: - Persistence
+
+    private func loadFromDisk() {
+        guard let data = try? Data(contentsOf: storeURL),
+              let decoded = try? JSONDecoder().decode([ClipEntry].self, from: data) else {
+            entries = []
+            return
+        }
+        entries = decoded
+    }
+
+    private func saveToDisk() {
+        if let data = try? JSONEncoder().encode(entries) {
+            try? data.write(to: storeURL, options: .atomic)
+        }
     }
 
     // MARK: - Add
 
     func add(_ content: String, type: ClipType = .text) {
-        // Duplicate kontrolü: aynı içerik zaten varsa, sadece tarihini güncelle
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        let descriptor = FetchDescriptor<ClipItem>(
-            predicate: #Predicate { $0.content == trimmed }
-        )
-
-        if let existing = try? modelContext.fetch(descriptor).first {
-            existing.createdAt = Date()
-            try? modelContext.save()
+        // Duplicate kontrolü
+        if let index = entries.firstIndex(where: { $0.content == trimmed }) {
+            entries[index].createdAt = Date()
+            saveToDisk()
             return
         }
 
         // Yeni öğe ekle
-        let item = ClipItem(content: trimmed, type: type)
-        modelContext.insert(item)
-        try? modelContext.save()
+        let entry = ClipEntry(content: trimmed, type: type)
+        entries.insert(entry, at: 0)
+        saveToDisk()
 
-        // Limit aşımı kontrolü
+        // Limit aşımı
         pruneOldest()
     }
 
     // MARK: - Fetch
 
-    func fetchAll(limit: Int = 50) -> [ClipItem] {
-        var descriptor = FetchDescriptor<ClipItem>(
-            sortBy: [
-                SortDescriptor(\.isPinned, order: .reverse),
-                SortDescriptor(\.createdAt, order: .reverse)
-            ]
-        )
-        descriptor.fetchLimit = limit
-
-        return (try? modelContext.fetch(descriptor)) ?? []
+    func fetchAll(limit: Int = 50) -> [ClipItemDTO] {
+        let sorted = sortPinnedFirst(entries)
+        return Array(sorted.prefix(limit)).map { $0.toClipItem(context: ()) }
     }
 
     // MARK: - Search
 
-    func search(_ query: String) -> [ClipItem] {
+    func search(_ query: String) -> [ClipItemDTO] {
         let lowercased = query.lowercased()
-        var descriptor = FetchDescriptor<ClipItem>(
-            predicate: #Predicate { $0.content.localizedStandardContains(lowercased) },
-            sortBy: [
-                SortDescriptor(\.isPinned, order: .reverse),
-                SortDescriptor(\.createdAt, order: .reverse)
-            ]
-        )
-        descriptor.fetchLimit = 50
+        let filtered = entries.filter { $0.content.lowercased().contains(lowercased) }
+        return sortPinnedFirst(filtered).map { $0.toClipItem(context: ()) }
+    }
 
-        return (try? modelContext.fetch(descriptor)) ?? []
+    /// Pinned öğeleri listenin başına taşı
+    private func sortPinnedFirst(_ items: [ClipEntry]) -> [ClipEntry] {
+        items.sorted { a, b in
+            if a.isPinned != b.isPinned { return a.isPinned }
+            return a.createdAt > b.createdAt
+        }
     }
 
     // MARK: - Delete
 
-    func delete(_ item: ClipItem) {
-        modelContext.delete(item)
-        try? modelContext.save()
+    func delete(id: UUID) {
+        entries.removeAll { $0.id == id }
+        saveToDisk()
     }
 
     // MARK: - Pin
 
-    func togglePin(_ item: ClipItem) {
-        item.isPinned.toggle()
-        try? modelContext.save()
+    func togglePin(id: UUID) {
+        if let index = entries.firstIndex(where: { $0.id == id }) {
+            entries[index].isPinned.toggle()
+            saveToDisk()
+        }
     }
 
-    // MARK: - Touch (listede üste taşı)
+    // MARK: - Touch
 
-    func touch(_ item: ClipItem) {
-        item.createdAt = Date()
-        try? modelContext.save()
+    func touch(id: UUID) {
+        if let index = entries.firstIndex(where: { $0.id == id }) {
+            entries[index].createdAt = Date()
+            saveToDisk()
+        }
+    }
+
+    // MARK: - Clear All (pinned hariç)
+
+    func clearAll() {
+        entries.removeAll { !$0.isPinned }
+        saveToDisk()
     }
 
     // MARK: - Prune
 
-    func pruneOldest() {
-        let all = fetchAll(limit: 999)
-        guard all.count > maxItems else { return }
-
-        // Pinned olmayanları tarihe göre sırala, en eskileri bul
-        let unpinned = all.filter { !$0.isPinned }.sorted { $0.createdAt < $1.createdAt }
-        let excess = all.count - maxItems
-
-        for item in unpinned.prefix(excess) {
-            modelContext.delete(item)
-        }
-        try? modelContext.save()
+    private func pruneOldest() {
+        guard entries.count > maxItems else { return }
+        let unpinned = entries.filter { !$0.isPinned }.sorted { $0.createdAt < $1.createdAt }
+        let excess = entries.count - maxItems
+        let idsToRemove = Set(unpinned.prefix(excess).map { $0.id })
+        entries.removeAll { idsToRemove.contains($0.id) }
+        saveToDisk()
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ClipRowView: View {
-    let item: ClipItem
+    let item: ClipItemDTO
     let onTap: () -> Void
     let onPin: () -> Void
 
@@ -9,13 +9,11 @@ struct ClipRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
-            // İçerik tipi ikonu
             Image(systemName: item.type == .filePath ? "doc" : "text.alignleft")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
                 .frame(width: 14)
 
-            // İçerik
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.content)
                     .lineLimit(2)
@@ -29,7 +27,6 @@ struct ClipRowView: View {
 
             Spacer(minLength: 4)
 
-            // Pin butonu (hover'da görünür)
             if isHovered {
                 Button(action: onPin) {
                     Image(systemName: item.isPinned ? "pin.fill" : "pin")
@@ -46,9 +43,7 @@ struct ClipRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
-        .onTapGesture {
-            onTap()
-        }
+        .onTapGesture { onTap() }
         .background(isHovered ? Color.accentColor.opacity(0.08) : Color.clear)
     }
 }
