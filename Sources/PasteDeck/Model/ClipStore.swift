@@ -16,6 +16,9 @@ final class ClipStore: ObservableObject {
     private let maxItems = 50
     private let storeURL: URL
 
+    /// Observer'ın kendi yazdığımız pasteboard değişikliklerini yok sayması için
+    nonisolated(unsafe) static var suppressObserver = false
+
     /// Images are stored in a subdirectory
     static var imagesDirectory: URL { pasteDeckImagesDirectory }
 
@@ -156,6 +159,14 @@ final class ClipStore: ObservableObject {
 
     func writeToPasteboard(clipID: UUID) {
         guard let entry = entries.first(where: { $0.id == clipID }) else { return }
+
+        // Kendi observer'ımızın bu değişikliği yok saymasını sağla
+        Self.suppressObserver = true
+        defer {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                Self.suppressObserver = false
+            }
+        }
 
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()

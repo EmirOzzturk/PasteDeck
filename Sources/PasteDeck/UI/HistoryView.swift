@@ -193,17 +193,8 @@ struct HistoryView: View {
     // MARK: - Auto Paste
 
     private func simulatePaste() {
-        let source = CGEventSource(stateID: .hidSystemState)
-        let vKey: CGKeyCode = 9 // kVK_ANSI_V
-
-        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true)
-        keyDown?.flags = .maskCommand
-        keyDown?.post(tap: .cghidEventTap)
-
-        usleep(10_000) // 10ms
-
-        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: false)
-        keyUp?.flags = .maskCommand
-        keyUp?.post(tap: .cghidEventTap)
+        // AppleScript ile Cmd+V — Accessibility izni gerektirmez, System Events kullanır
+        let script = "tell application \"System Events\" to keystroke \"v\" using command down"
+        NSAppleScript(source: script)?.executeAndReturnError(nil)
     }
 }

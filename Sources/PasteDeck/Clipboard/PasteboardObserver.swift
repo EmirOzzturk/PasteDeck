@@ -21,6 +21,9 @@ final class PasteboardObserver {
 
             self.lastChangeCount = current
 
+            // Kendi writeToPasteboard çağrımızdan gelen değişiklikleri yok say
+            if ClipStore.suppressObserver { return }
+
             // ⚠️ ÖNEMLİ: Image tipleri HER ZAMAN önce kontrol edilmeli.
             // Birçok uygulama (tarayıcılar) "Copy Image" yapınca pasteboard'a
             // hem URL string'i hem image data koyar — önce image yakalanmazsa
